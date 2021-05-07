@@ -34,10 +34,7 @@ def load_dataset():
 
     classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-    return testloader, classes, batch_size
-
-
-
+    return trainloader, testloader, classes, batch_size
 
 class Net(nn.Module):
     def __init__(self):
@@ -48,7 +45,6 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
-
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
@@ -58,52 +54,63 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
 
-
 def main():
-    PATH = 'cifar_net.pth'
+    print("Hello World!")
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+print(device)
+
+train, test, classes, batch = load_dataset()
+
+# get some random training images
+#dataiter = iter(train)
+#images, labels = dataiter.next()
+
+# show images
+#imshow(torchvision.utils.make_grid(images))
+# print labels
+#print(' '.join('%5s' % classes[labels[j]] for j in range(batch)))
+
+
+
+net = Net()
+
+net.to(device)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+X = list()
+for epoch in range(100):  # loop over the dataset multiple times
+    print(epoch)
+    running_loss = 0.0
+    for i, data in enumerate(train, 0):
+        # get the inputs; data is a list of [inputs, labels]
+        inputs, labels = data[0].to(device), data[1].to(device)
     
+        # zero the parameter gradients
+        optimizer.zero_grad()
 
-    testloader, classe, batch = load_dataset()
+        # forward + backward + optimize
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
 
-    dataiter = iter(testloader)
-    images, labels = dataiter.next()
-    print('GroundTruth: ', ' '.join('%5s' % classe[labels[j]] for j in range(4)))
-    
-    net = Net()
+        # print statistics
+        running_loss += loss.item()
+        if i % 50 == 19:    # print every 2000 mini-batches
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 50))
+            running_loss = 0.0
 
+print('Finished Training')
 
-
-
-    net.load_state_dict(torch.load(PATH))
-
-    outputs = net(images)
-
-    outputs = net(images)
-
-    _, predicted = torch.max(outputs, 1)
-
-    print('Predicted: ', ' '.join('%5s' % classe[predicted[j]]
-                              for j in range(4)))
+PATH = './cifar_net.pth'
+torch.save(net.state_dict(), PATH)
 
 
-    correct_pred = {classname: 0 for classname in classe}
-    total_pred = {classname: 0 for classname in classe}
-    # since we're not training, we don't need to calculate the gradients for our outputs
-    with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            outputs = net(images)
-            _, predictions = torch.max(outputs, 1)
-            # collect the correct predictions for each class
-            for label, prediction in zip(labels, predictions):
-                if label == prediction:
-                    correct_pred[classe[label]] += 1
-                total_pred[classe[label]] += 1
-    # print accuracy for each class
-    for classname, correct_count in correct_pred.items():
-        accuracy = 100 * float(correct_count) / total_pred[classname]
-        print("Accuracy for class {:5s} is: {:.1f} %".format(classname,accuracy))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
