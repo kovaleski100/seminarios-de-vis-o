@@ -1,0 +1,14 @@
+Files already downloaded and verified
+Files already downloaded and verified
+GroundTruth:    cat  ship  ship plane
+Predicted:    cat  ship  ship plane
+Accuracy for class plane is: 72.6 %+
+Accuracy for class car   is: 69.4 %
+Accuracy for class bird  is: 45.1 %+
+Accuracy for class cat   is: 34.8 %+
+Accuracy for class deer  is: 54.8 %+
+Accuracy for class dog   is: 47.8 %+
+Accuracy for class frog  is: 71.2 %+
+Accuracy for class horse is: 64.5 %
+Accuracy for class ship  is: 75.9 %+
+Accuracy for class truck is: 70.3 %+
