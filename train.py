@@ -7,6 +7,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+# TODO: Comment
+# TODO: Refactor nn out of train.py and test.py
+# TODO: Implementar
+#   > rotação (em graus, não só ângulos retos)
+#   > translação (% da imagem, direção)
+#   > escalamento (ampliar ou diminuir, % da imagem, sempre no centro)
+#   > salt & pepper
+#   > negativa da imagem (RGB, ctrl+i do Paint)
 
 def imshow(img):
     img = img / 2 + 0.5     # unnormalize
@@ -57,57 +65,46 @@ class Net(nn.Module):
 def main():
     print("Hello World!")
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-print(device)
+    print(device)
 
-train, test, classes, batch = load_dataset()
+    train, test, classes, batch = load_dataset()
 
-# get some random training images
-#dataiter = iter(train)
-#images, labels = dataiter.next()
+    net = Net()
 
-# show images
-#imshow(torchvision.utils.make_grid(images))
-# print labels
-#print(' '.join('%5s' % classes[labels[j]] for j in range(batch)))
+    net.to(device)
 
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    X = list()
+    for epoch in range(100):  # loop over the dataset multiple times
+        print(epoch)
+        running_loss = 0.0
+        for i, data in enumerate(train, 0):
+            # get the inputs; data is a list of [inputs, labels]
+            inputs, labels = data[0].to(device), data[1].to(device)
+        
+            # zero the parameter gradients
+            optimizer.zero_grad()
 
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-net = Net()
+            # print statistics
+            running_loss += loss.item()
+            if i % 500 == 199:    # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' %
+                    (epoch + 1, i + 1, running_loss / 50))
+                running_loss = 0.0
 
-net.to(device)
+    print('Finished Training')
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-X = list()
-for epoch in range(100):  # loop over the dataset multiple times
-    print(epoch)
-    running_loss = 0.0
-    for i, data in enumerate(train, 0):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data[0].to(device), data[1].to(device)
-    
-        # zero the parameter gradients
-        optimizer.zero_grad()
-
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        # print statistics
-        running_loss += loss.item()
-        if i % 500 == 199:    # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 50))
-            running_loss = 0.0
-
-print('Finished Training')
-
-PATH = './cifar_net.pth'
-torch.save(net.state_dict(), PATH)
+    PATH = './cifar_net.pth'
+    torch.save(net.state_dict(), PATH)
 
 
 
