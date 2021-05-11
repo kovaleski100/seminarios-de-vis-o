@@ -7,15 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-# TODO: Comment
-# TODO: Refactor nn out of train.py and test.py
-# TODO: Implementar
-#   > rotação (em graus, não só ângulos retos)
-#   > translação (% da imagem, direção)
-#   > escalamento (ampliar ou diminuir, % da imagem, sempre no centro)
-#   > salt & pepper
-#   > negativa da imagem (RGB, ctrl+i do Paint)
-
 def imshow(img):
     img = img / 2 + 0.5     # unnormalize
     npimg = img.numpy()

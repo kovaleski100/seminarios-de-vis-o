@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from scipy import ndimage
+from random import randint
+import cv2
 
 
 def imshow(img):
@@ -38,15 +40,49 @@ def load_dataset():
     return testloader, classes, batch_size
 
 
+def saltPepper(image, ratio):
+    height = len(image[0])
+    width = len(image[0][0])
+    numPixels = int(ratio*width*height)
+    for i in range(numPixels):
+        color = randint(0,1) * 2 - 1
+        x = randint(0,width-1)
+        y = randint(0,height-1)
+        image[0][y][x] = color
+        image[1][y][x] = color
+        image[2][y][x] = color
+    return image
 
-def applyTransformation(image, transf, val):
+
+def applyTransformation(image, transf, val=None):
     if transf == 'rotate':
         image[0] = torch.tensor(ndimage.rotate(image[0], val, reshape=False)) # Red
         image[1] = torch.tensor(ndimage.rotate(image[1], val, reshape=False)) # Green
         image[2] = torch.tensor(ndimage.rotate(image[2], val, reshape=False)) # Blue
-        # imshow(image)
+    elif transf == 'shift':
+        image[0] = torch.tensor(ndimage.shift(image[0], val, mode='constant'))
+        image[1] = torch.tensor(ndimage.shift(image[1], val, mode='constant'))
+        image[2] = torch.tensor(ndimage.shift(image[2], val, mode='constant'))
+    elif transf == 'scale':
+        # Buggy
+        height = len(image[0])
+        width = len(image[0][0])
+        image0 = ndimage.zoom(image[0], val, mode='constant')
+        image0 = cv2.resize(image0, (width, height))
+        image[0] = torch.tensor(image0)
+        image1 = ndimage.zoom(image[1], val, mode='constant')
+        image1 = cv2.resize(image1, (width, height))
+        image[1] = torch.tensor(image1)
+        image2 = ndimage.zoom(image[2], val, mode='constant')
+        image2 = cv2.resize(image2, (width, height))
+        image[2] = torch.tensor(image2)
+    elif transf == 'saltpepper':
+        image = saltPepper(image, val)
+    elif transf == 'negative':
+        image = image / 2 + 0.5 # Unnormalize
+        image = 1.0 - image # Apply inverse
+        image = 2 * image - 1 # Normalize
     return image
-
 
 
 class Net(nn.Module):
@@ -74,7 +110,6 @@ def main():
     
 
     testloader, classe, batch = load_dataset()
-    applyTransf = True
 
     dataiter = iter(testloader)
     # images, labels = dataiter.next()
@@ -95,10 +130,14 @@ def main():
     with torch.no_grad():
         for data in testloader:
             images, labels = data
-            if applyTransf:
-                for imgIdx in range(len(images)):
-                    images[imgIdx] = applyTransformation(images[imgIdx+1], 'rotate', 45)
-                    return
+            for imgIdx in range(len(images)):
+                images[imgIdx] = applyTransformation(images[imgIdx], '')
+                # images[imgIdx] = applyTransformation(images[imgIdx], 'rotate', 30)
+                # images[imgIdx] = applyTransformation(images[imgIdx], 'negative')
+                # images[imgIdx] = applyTransformation(images[imgIdx], 'shift', [0, 10]) # Horizontal shift
+                # images[imgIdx] = applyTransformation(images[imgIdx], 'scale', 2)
+                # images[imgIdx] = applyTransformation(images[imgIdx], 'saltpepper', 0.1) # Between 0 and 1
+                # imshow(images[imgIdx])
             outputs = net(images)
             _, predictions = torch.max(outputs, 1)
             # collect the correct predictions for each class
