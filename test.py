@@ -6,6 +6,7 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from scipy import ndimage
 
 
 def imshow(img):
@@ -38,6 +39,15 @@ def load_dataset():
 
 
 
+def applyTransformation(image, transf, val):
+    if transf == 'rotate':
+        image[0] = torch.tensor(ndimage.rotate(image[0], val, reshape=False)) # Red
+        image[1] = torch.tensor(ndimage.rotate(image[1], val, reshape=False)) # Green
+        image[2] = torch.tensor(ndimage.rotate(image[2], val, reshape=False)) # Blue
+        # imshow(image)
+    return image
+
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -64,27 +74,20 @@ def main():
     
 
     testloader, classe, batch = load_dataset()
+    applyTransf = True
 
     dataiter = iter(testloader)
-    images, labels = dataiter.next()
-    print('GroundTruth: ', ' '.join('%5s' % classe[labels[j]] for j in range(4)))
-    
+    # images, labels = dataiter.next()
+    # print('GroundTruth: ', ' '.join('%5s' % classe[labels[j]] for j in range(4)))
     net = Net()
 
+    # net.load_state_dict(torch.load(PATH))
+    net.load_state_dict(torch.load(PATH, map_location=torch.device('cpu')))
 
-
-
-    net.load_state_dict(torch.load(PATH))
-
-    outputs = net(images)
-
-    outputs = net(images)
-
-    _, predicted = torch.max(outputs, 1)
-
-    print('Predicted: ', ' '.join('%5s' % classe[predicted[j]]
-                              for j in range(4)))
-
+    # outputs = net(images)
+    # _, predicted = torch.max(outputs, 1)
+    # print('Predicted: ', ' '.join('%5s' % classe[predicted[j]]
+    #                           for j in range(4)))
 
     correct_pred = {classname: 0 for classname in classe}
     total_pred = {classname: 0 for classname in classe}
@@ -92,6 +95,10 @@ def main():
     with torch.no_grad():
         for data in testloader:
             images, labels = data
+            if applyTransf:
+                for imgIdx in range(len(images)):
+                    images[imgIdx] = applyTransformation(images[imgIdx+1], 'rotate', 45)
+                    return
             outputs = net(images)
             _, predictions = torch.max(outputs, 1)
             # collect the correct predictions for each class
