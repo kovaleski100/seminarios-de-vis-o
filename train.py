@@ -6,6 +6,22 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torch
+import torchvision
+import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
+import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from scipy import ndimage
+from random import randint
+import cv2
+from numba import jit, cuda
+import warnings
+from numba.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning
+warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
+warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 def imshow(img):
     img = img / 2 + 0.5     # unnormalize
@@ -18,7 +34,7 @@ def load_dataset():
         [transforms.ToTensor(),
          transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    batch_size = 32
+    batch_size = 64
 
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                         download=True, transform=transform)
@@ -33,6 +49,21 @@ def load_dataset():
     classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
     return trainloader, testloader, classes, batch_size
+
+
+@jit(target = "cuda")
+def saltPepper(self, image, ratio):
+    height = len(image[0])
+    width = len(image[0][0])
+    numPixels = int(ratio*width*height)
+    for i in range(numPixels):
+        color = randint(0,1) * 2 - 1
+        x = randint(0,width-1)
+        y = randint(0,height-1)
+        image[0][y][x] = color
+        image[1][y][x] = color
+        image[2][y][x] = color
+    return image
 
 class Net(nn.Module):
     def __init__(self):
@@ -52,6 +83,40 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
 
+    
+
+
+    def applyTransformation(self, image, transf, val=None):
+        if transf == 'rotate':
+            image[0] = torch.tensor(ndimage.rotate(image[0], val, reshape=False)) # Red
+            image[1] = torch.tensor(ndimage.rotate(image[1], val, reshape=False)) # Green
+            image[2] = torch.tensor(ndimage.rotate(image[2], val, reshape=False)) # Blue
+        elif transf == 'shift':
+            image[0] = torch.tensor(ndimage.shift(image[0], val, mode='constant'))
+            image[1] = torch.tensor(ndimage.shift(image[1], val, mode='constant'))
+            image[2] = torch.tensor(ndimage.shift(image[2], val, mode='constant'))
+        elif transf == 'scale':
+            # Buggy
+            height = len(image[0])
+            width = len(image[0][0])
+            image0 = ndimage.zoom(image[0], val, mode='constant')
+            image0 = cv2.resize(image0, (width, height))
+            image[0] = torch.tensor(image0)
+            image1 = ndimage.zoom(image[1], val, mode='constant')
+            image1 = cv2.resize(image1, (width, height))
+            image[1] = torch.tensor(image1)
+            image2 = ndimage.zoom(image[2], val, mode='constant')
+            image2 = cv2.resize(image2, (width, height))
+            image[2] = torch.tensor(image2)
+        elif transf == 'saltpepper':
+            image = self.saltPepper(image, val)
+        elif transf == 'negative':
+            image = image / 2 + 0.5 # Unnormalize
+            image = 1.0 - image # Apply inverse
+            image = 2 * image - 1 # Normalize
+        return image
+
+
 def main():
     print("Hello World!")
 
@@ -68,7 +133,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     X = list()
-    for epoch in range(100):  # loop over the dataset multiple times
+    for epoch in range(20):  # loop over the dataset multiple times
         print(epoch)
         running_loss = 0.0
         for i, data in enumerate(train, 0):
@@ -77,8 +142,24 @@ def main():
         
             # zero the parameter gradients
             optimizer.zero_grad()
-
+            #print("none")
             # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            #for imgIdx in range(len(inputs)):
+            #    inputs[imgIdx] = net.applyTransformation(inputs[imgIdx], 'negative')
+
+ #           outputs = net(inputs)
+  #          loss = criterion(outputs, labels)
+   #         loss.backward()
+    #        optimizer.step()
+
+            for imgIdx in range(len(inputs)):
+                inputs[imgIdx] = net.applyTransformation(inputs[imgIdx], 'saltpepper', 0.1) # Between 0 and 1
+
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
@@ -88,12 +169,12 @@ def main():
             running_loss += loss.item()
             if i % 500 == 199:    # print every 2000 mini-batches
                 print('[%d, %5d] loss: %.3f' %
-                    (epoch + 1, i + 1, running_loss / 50))
+                    (epoch + 1, i + 1, running_loss / 500))
                 running_loss = 0.0
 
     print('Finished Training')
 
-    PATH = './cifar_net.pth'
+    PATH = './cifar_net20_sp.pth'
     torch.save(net.state_dict(), PATH)
 
 
