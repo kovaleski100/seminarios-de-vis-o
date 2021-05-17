@@ -19,9 +19,6 @@ from random import randint
 import cv2
 from numba import jit, cuda
 import warnings
-from numba.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning
-warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
-warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 def imshow(img):
     img = img / 2 + 0.5     # unnormalize
@@ -51,7 +48,6 @@ def load_dataset():
     return trainloader, testloader, classes, batch_size
 
 
-@jit(target = "cuda")
 def saltPepper(self, image, ratio):
     height = len(image[0])
     width = len(image[0][0])
@@ -75,11 +71,17 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
     def forward(self, x):
+        print(len(x[0]))
         x = self.pool(F.relu(self.conv1(x)))
+        print(len(x[0]))
         x = self.pool(F.relu(self.conv2(x)))
+        print(len(x[0]))
         x = torch.flatten(x, 1) # flatten all dimensions except batch
+        print(len(x[0]))
         x = F.relu(self.fc1(x))
+        print(len(x[0]))
         x = F.relu(self.fc2(x))
+        print(len(x[0]))
         x = self.fc3(x)
         return x
 
@@ -139,7 +141,7 @@ def main():
         for i, data in enumerate(train, 0):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data[0].to(device), data[1].to(device)
-        
+
             # zero the parameter gradients
             optimizer.zero_grad()
             #print("none")
@@ -157,13 +159,13 @@ def main():
    #         loss.backward()
     #        optimizer.step()
 
-            for imgIdx in range(len(inputs)):
-                inputs[imgIdx] = net.applyTransformation(inputs[imgIdx], 'saltpepper', 0.1) # Between 0 and 1
+            #for imgIdx in range(len(inputs)):
+            #    inputs[imgIdx] = net.applyTransformation(inputs[imgIdx], 'saltpepper', 0.1) # Between 0 and 1
 
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            #outputs = net(inputs)
+            #loss = criterion(outputs, labels)
+            #loss.backward()
+            #optimizer.step()
 
             # print statistics
             running_loss += loss.item()

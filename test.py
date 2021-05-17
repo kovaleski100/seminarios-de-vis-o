@@ -106,7 +106,7 @@ class Net(nn.Module):
 
 
 def main():
-    PATH = 'cifar_net.pth'
+    PATH = 'cifar_net20_neg+sp.pth'
     
 
     testloader, classe, batch = load_dataset()
