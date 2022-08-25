@@ -17,8 +17,6 @@ import torch.optim as optim
 from scipy import ndimage
 from random import randint
 import cv2
-from numba import jit, cuda
-import warnings
 
 def imshow(img):
     img = img / 2 + 0.5     # unnormalize
@@ -147,9 +145,11 @@ def main():
             #print("none")
             # forward + backward + optimize
             outputs = net(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            break
+        break
+            # loss = criterion(outputs, labels)
+            # loss.backward()
+            # optimizer.step()
 
             #for imgIdx in range(len(inputs)):
             #    inputs[imgIdx] = net.applyTransformation(inputs[imgIdx], 'negative')
@@ -168,11 +168,11 @@ def main():
             #optimizer.step()
 
             # print statistics
-            running_loss += loss.item()
-            if i % 500 == 199:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                    (epoch + 1, i + 1, running_loss / 500))
-                running_loss = 0.0
+            # running_loss += loss.item()
+            # if i % 500 == 199:    # print every 2000 mini-batches
+            #     print('[%d, %5d] loss: %.3f' %
+            #         (epoch + 1, i + 1, running_loss / 500))
+            #     running_loss = 0.0
 
     print('Finished Training')
 
